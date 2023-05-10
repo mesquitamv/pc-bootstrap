@@ -1,0 +1,320 @@
+- hosts: localhost
+  become: true
+  
+  vars:
+    deb_architecture: {
+      "aarch64": "arm64",
+      "x86_64": "amd64"
+    }
+
+  tasks:
+    
+    - name: Set host_architecture variable
+      ansible.builtin.set_fact:
+        host_architecture: "{{ [ansible_architecture] | map('extract', deb_architecture) | first }}" 
+    
+    - name: Give sudo NOPASSWD to mmesquita user
+      lineinfile: 
+        dest: /etc/sudoers 
+        line: "mmesquita ALL=(ALL) NOPASSWD:ALL"
+        state: present
+
+    - name: Copy scripts to /usr/local/bin
+      ansible.builtin.copy:
+        src: '{{ playbook_dir }}/../../files/scripts/{{ item }}'
+        dest: /usr/local/bin/
+        owner: root
+        group: root
+        mode: '0775'
+      with_items:
+        - aws-configure
+        - goto
+        - keycron-ch
+        - ns-setup
+        - pyauth
+        - terminate-instances.sh        
+    
+    - name: Install deb packages
+      ansible.builtin.apt:
+        name: "{{ item }}"
+        state: present
+        update_cache: yes
+      with_items:
+        - jq
+        - flatpak
+        - wget
+        - gpg
+        - vim
+
+    - name: Edit PS1 for mmesquita user
+      ansible.builtin.lineinfile:
+        dest: /home/mmesquita/.bashrc
+        line: PS1='\[\e[0;1;91m\][\[\e[0;91m\]$?\[\e[0;1;91m\]]\[\e[0;1;93m\]$(git branch 2>/dev/null | grep '"'"'^*'"'"' | colrm 1 2)\[\e[0;1;92m\]\W\[\e[0;1;96m\]\u\[\e[0;1;93m\]-\[\e[0;1;93m\]>\[\e[0m\]'
+        state: present
+    
+    - name: Edit PS1 for root user
+      ansible.builtin.lineinfile:
+        dest: /root/.bashrc
+        line: PS1='\[\e[0;1;91m\][\[\e[0;91m\]$?\[\e[0;1;91m\]]\[\e[0;1;93m\]$(git branch 2>/dev/null | grep '"'"'^*'"'"' | colrm 1 2)\[\e[0;1;92m\]\W\[\e[0;1;91m\]\u\[\e[0;1;93m\]-\[\e[0;1;93m\]>\[\e[0m\]'
+        state: present
+
+    - name: Install Terminator
+      block:
+
+        - name: Install Terminator
+          ansible.builtin.apt:
+            name: terminator
+            state: present
+            update_cache: yes
+        
+        - name: Install requests
+          ansible.builtin.pip:
+            name: requests
+
+        - name: Create plugin folder on Terminator
+          ansible.builtin.file:
+            name: /home/mmesquita/.config/terminator/plugins
+            state: directory
+
+        - name: Download Terminator Themes
+          ansible.builtin.get_url:
+            url: https://git.io/v5Zww
+            dest: /home/mmesquita/.config/terminator/plugins/terminator-themes.py
+            mode: '0775'
+ 
+        - name: Copy scripts to /usr/local/bin
+          ansible.builtin.copy:
+            src: '{{ playbook_dir }}/../../files/configs/terminator/config'
+            dest: /home/mmesquita/.config/terminator/
+            owner: mmesquita
+            group: mmesquita
+            mode: '0664'
+    
+    - name: Install VSCode
+      block:
+
+        - name: Add VSCode GPG apt Key
+          apt_key:
+            url: https://packages.microsoft.com/keys/microsoft.asc
+            state: present
+            keyring: /etc/apt/keyrings/packages.microsoft.gpg
+
+        - name: Add Visual Studio Code repository
+          apt_repository:
+            repo: "deb [arch=amd64,arm64,armhf signed-by=/etc/apt/keyrings/packages.microsoft.gpg] https://packages.microsoft.com/repos/code stable main"
+            filename: vscode
+
+        - name: Install apt-transport-https
+          ansible.builtin.apt:
+            name: apt-transport-https
+            state: present
+            update_cache: yes        
+        
+        - name: Install VSCode
+          ansible.builtin.apt:
+            name: code
+            state: present
+            update_cache: yes
+
+    - name: Install OpenLens
+      block:
+
+        - name: Install OpenLens
+          ansible.builtin.apt:
+            deb: https://github.com/MuhammedKalkan/OpenLens/releases/download/v6.4.15/OpenLens-6.4.15.amd64.deb
+
+    - name: Install Brave Browser
+      block:
+
+        - name: Install cURL
+          ansible.builtin.apt:
+            name: curl
+            state: present
+            update_cache: yes
+
+        - name: Add Brave GPG apt Key
+          apt_key:
+            url: https://brave-browser-apt-release.s3.brave.com/brave-browser-archive-keyring.gpg
+            state: present
+
+        - name: Add Brave Browser repository
+          apt_repository:
+            repo: "deb [signed-by=/usr/share/keyrings/brave-browser-archive-keyring.gpg] https://brave-browser-apt-release.s3.brave.com/ stable main"
+            filename: brave-browser-release
+
+        - name: Install Brave
+          ansible.builtin.apt:
+            name: brave-browser
+            state: present
+            update_cache: yes
+    
+    - name: Install Spotify
+      block:
+
+        - name: Add Spotify GPG apt Key
+          apt_key:
+            url: https://download.spotify.com/debian/pubkey_7A3A762FAFD4A51F.gpg
+            state: present
+        
+        - name: Add Spotify repository
+          apt_repository:
+            repo: "deb http://repository.spotify.com stable non-free"
+            filename: spotify
+        
+        - name: Install Spotify
+          ansible.builtin.apt:
+            name: spotify-client
+            state: present
+            update_cache: yes
+
+    - name: Install kubectl
+      block:
+
+        - name: Install ca-certificates
+          ansible.builtin.apt:
+            name: ca-certificates
+            state: present
+            update_cache: yes
+
+        - name: Add kubectl GPG apt Key
+          apt_key:
+            url: https://packages.cloud.google.com/apt/doc/apt-key.gpg
+            state: present
+
+        - name: Add Kubernetes repository
+          apt_repository:
+            repo: "deb [signed-by=/etc/apt/keyrings/kubernetes-archive-keyring.gpg] https://apt.kubernetes.io/ kubernetes-xenial main"
+            filename: kubernetes
+        
+        - name: Install kubectl
+          ansible.builtin.apt:
+            name: kubectl
+            state: present
+            update_cache: yes        
+
+        - name: Add k alias for kubectl
+          ansible.builtin.lineinfile:
+            path: /home/mmesquita/.bashrc
+            line: alias k=kubectl
+            state: present
+
+        - name: Add kubectl and k autocomplete
+          ansible.builtin.lineinfile:
+            path: /home/mmesquita/.bashrc
+            line: complete -o default -F __start_kubectl k
+            state: present
+
+        - name: Copy kubectl config file
+          ansible.builtin.copy:
+            src: '{{ playbook_dir }}/../../files/configs/kubeconfig/config'
+            dest: /home/mmesquita/.kube/
+            owner: root
+            group: root
+            mode: '0775'
+
+    - name: Test if AWS Cli is installed
+      ansible.builtin.command: aws --version
+      ignore_errors: true
+      register: check_awscli
+
+    - name: Install AWS Cli
+      block:
+
+        - name: Download awscliv2.zip
+          shell: curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+        
+        - name: Unzip awscliv2.zip
+          shell: unzip awscliv2.zip
+        
+        - name: Install AWS Cli
+          shell: sudo ./aws/install
+        
+        - name: Clean files
+          ansible.builtin.file:
+            path: '{{ playbook_dir }}/{{ item }}'
+            state: absent
+          with_items:
+            - aws
+            - awscliv2.zip
+
+      when:
+        - check_awscli.rc != 0
+
+    - name: Install Docker
+      block:
+        
+        - name: Install required system packages
+          apt:
+            pkg:
+              - apt-transport-https
+              - ca-certificates
+              - curl
+              - software-properties-common
+              - python3-pip
+              - virtualenv
+              - python3-setuptools
+            state: latest
+            update_cache: true
+
+        - name: Add Docker GPG apt Key
+          apt_key:
+            url: https://download.docker.com/linux/ubuntu/gpg
+            state: present
+
+        - name: Add Docker Repository
+          apt_repository:
+            repo: deb https://download.docker.com/linux/ubuntu focal stable
+            state: present
+
+        - name: Update apt and install docker-ce
+          apt:
+            name: docker-ce
+            state: latest
+            update_cache: true
+
+        - name: Install Docker Module for Python
+          pip:
+            name: docker
+
+    - name: Install Helm
+      block:
+
+        - name: Add Helm GPG apt Key
+          apt_key:
+            url: https://baltocdn.com/helm/signing.asc
+            state: present
+            keyring: /usr/share/keyrings/helm.gpg
+
+        - name: Install apt-transport-https
+          ansible.builtin.apt:
+            name: apt-transport-https
+            state: present
+            update_cache: yes
+        
+        - name: Add Helm repository
+          apt_repository:
+            repo: "deb [arch={{ host_architecture }} signed-by=/usr/share/keyrings/helm.gpg] https://baltocdn.com/helm/stable/debian/ all main"
+            filename: helm-stable-debian
+        
+        - name: Install Helm
+          ansible.builtin.apt:
+            name: helm
+            state: present
+            update_cache: yes
+
+    - name: Install PulseEffects
+      block:
+
+        - name: Install PulseEffects
+          community.general.flatpak:
+            name: https://dl.flathub.org/repo/appstream/com.github.wwmm.pulseeffects.flatpakref
+            state: present
+
+        - name: Add modules to default.pa
+          ansible.builtin.lineinfile:
+            dest: /etc/pulse/default.pa
+            line: "{{ item  }}"
+            state: present
+          with_items:
+            - load-module module-equalizer-sink
+            - load-module module-dbus-protocol
