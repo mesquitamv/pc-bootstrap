@@ -2,7 +2,7 @@
 
 I create this because I'm tired to format my PC and install manually all the stuffs that I need. If I automate this tasks on servers, why not on my Desktop?
 
-## OS version tested
+## Tested OS versions
 - Ubuntu 22.04
 - Ubuntu 22.10
 
