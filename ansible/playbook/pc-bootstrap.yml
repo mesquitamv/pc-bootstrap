@@ -6,6 +6,9 @@
       "aarch64": "arm64",
       "x86_64": "amd64"
     }
+    apt_versions: {
+      "terraform": "1.3.6"
+    }
 
   tasks:
     
@@ -164,6 +167,26 @@
         - name: Install Spotify
           ansible.builtin.apt:
             name: spotify-client
+            state: present
+            update_cache: yes
+
+    - name: Install Terraform
+      block:
+
+        - name: Add Terraform GPG apt Key
+          apt_key:
+            url: https://apt.releases.hashicorp.com/gpg
+            state: present
+            keyring: /usr/share/keyrings/hashicorp-archive-keyring.gpg
+        
+        - name: Add Terraform repository
+          apt_repository:
+            repo: "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com {{ ansible_distribution_release }} main"
+            filename: hashicorp
+        
+        - name: Install Terraform
+          ansible.builtin.apt:
+            name: "terraform={{ apt_versions['terraform']  }}"
             state: present
             update_cache: yes
 

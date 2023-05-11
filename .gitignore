@@ -1,3 +1,6 @@
 files/bin/
-files/configs/
-files/scripts/
+files/configs/kubeconfig
+files/scripts/aws-configure
+files/scripts/goto
+files/scripts/pyauth
+ansible/playbook/test.yml
