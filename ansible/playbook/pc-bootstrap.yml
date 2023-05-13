@@ -52,13 +52,13 @@
     - name: Edit PS1 for mmesquita user
       ansible.builtin.lineinfile:
         dest: /home/mmesquita/.bashrc
-        line: PS1='\[\e[0;1;91m\][\[\e[0;91m\]$?\[\e[0;1;91m\]]\[\e[0;1;93m\]$(git branch 2>/dev/null | grep '"'"'^*'"'"' | colrm 1 2)\[\e[0;1;92m\]\W\[\e[0;1;96m\]\u\[\e[0;1;93m\]-\[\e[0;1;93m\]>\[\e[0m\]'
+        line: PS1='\[\e[0;1;96m\]\u\[\e[0;1;93m\]$(git branch 2> /dev/null | sed -e "/^[^*]/d" -e "s/* \(.*\)/ (\1)/") \[\e[0;1;92m\]\w \[\e[0;1;93m\]>\[\e[0m\]'
         state: present
     
     - name: Edit PS1 for root user
       ansible.builtin.lineinfile:
         dest: /root/.bashrc
-        line: PS1='\[\e[0;1;91m\][\[\e[0;91m\]$?\[\e[0;1;91m\]]\[\e[0;1;93m\]$(git branch 2>/dev/null | grep '"'"'^*'"'"' | colrm 1 2)\[\e[0;1;92m\]\W\[\e[0;1;91m\]\u\[\e[0;1;93m\]-\[\e[0;1;93m\]>\[\e[0m\]'
+        line: PS1='\[\e[0;1;91m\]\u\[\e[0;1;93m\]$(git branch 2> /dev/null | sed -e "/^[^*]/d" -e "s/* \(.*\)/ (\1)/") \[\e[0;1;92m\]\w \[\e[0;1;93m\]>\[\e[0m\]'
         state: present
 
     - name: Install Terminator
@@ -84,6 +84,8 @@
             url: https://git.io/v5Zww
             dest: /home/mmesquita/.config/terminator/plugins/terminator-themes.py
             mode: '0775'
+            owner: mmesquita
+            group: mmesquita
  
         - name: Copy scripts to /usr/local/bin
           ansible.builtin.copy:
@@ -92,7 +94,6 @@
             owner: mmesquita
             group: mmesquita
             mode: '0664'
-    
     - name: Install VSCode
       block:
 
