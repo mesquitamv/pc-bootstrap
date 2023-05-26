@@ -370,3 +370,13 @@
           with_items:
             - load-module module-equalizer-sink
             - load-module module-dbus-protocol
+
+    - name: Install Velero Cli (ver 1.10.3)
+      ansible.builtin.unarchive:
+        src: https://github.com/vmware-tanzu/velero/releases/download/v1.10.3/velero-v1.10.3-linux-amd64.tar.gz
+        dest: /usr/local/bin
+        remote_src: yes
+        extra_opts:
+          - --strip=1
+          - --wildcards
+          - '*/velero'
